@@ -2,7 +2,7 @@
 title: "Initial Comparisons"
 author: "Sean Lucey"
 date: "1/18/2022"
-output: git_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -15,5 +15,30 @@ These are some initial comparisons between the 2019 AA and CAMS tables.  Data we
 ```{r Data Pull}
 load(file = here('data-raw', 'CAMS_2019.RData'))
 load(file = here('data-raw', 'AA_2019.RData'))
+#move data out to main object
+aa <- aa$comland
 ```
 
+First some simple metrics
+```{r}
+nrow(cams)
+nrow(aa)
+```
+
+Total landings
+```{r}
+cams[, sum(SPPLIVMT)]
+aa[, sum(SPPLIVMT)]
+```
+
+Landings that are missing area
+```{r}
+cams[AREA == 0, sum(SPPLIVMT)]
+aa[AREA == 0, sum(SPPLIVMT)]
+```
+
+As percentage
+```{r}
+cams[AREA == 0, sum(SPPLIVMT)] / cams[, sum(SPPLIVMT)]
+aa[AREA == 0, sum(SPPLIVMT)] / aa[, sum(SPPLIVMT)]
+```
