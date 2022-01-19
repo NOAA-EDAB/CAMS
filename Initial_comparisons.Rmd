@@ -1,0 +1,19 @@
+---
+title: "Initial Comparisons"
+author: "Sean Lucey"
+date: "1/18/2022"
+output: git_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(data.table); library(here)
+```
+
+These are some initial comparisons between the 2019 AA and CAMS tables.  Data were pulled using the `get_comland_raw_data` function from the R package `comlandr` created and maintained by the Ecosystem Dynamics and Assessment Branch (EDAB) of the Northeast Fisheries Science Center (NEFSC).
+
+```{r Data Pull}
+load(file = here('data-raw', 'CAMS_2019.RData'))
+load(file = here('data-raw', 'AA_2019.RData'))
+```
+
