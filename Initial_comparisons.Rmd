@@ -1,13 +1,13 @@
 ---
 title: "Initial Comparisons"
 author: "Sean Lucey"
-date: "1/18/2022"
+date: "2/03/2022"
 output: github_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-library(data.table); library(here)
+library(data.table); library(here); library(comlandr); library(ggplot2)
 ```
 
 These are some initial comparisons between the 2019 AA and CAMS tables.  Data were pulled using the `get_comland_raw_data` function from the R package `comlandr` created and maintained by the Ecosystem Dynamics and Assessment Branch (EDAB) of the Northeast Fisheries Science Center (NEFSC).
@@ -41,4 +41,81 @@ As percentage
 ```{r}
 cams[AREA == 0, sum(SPPLIVMT)] / cams[, sum(SPPLIVMT)]
 aa[AREA == 0, sum(SPPLIVMT)] / aa[, sum(SPPLIVMT)]
+```
+
+Now to run the scripts for the SOE.  First assign landings to an EPU then aggregate landings by SOE groups.
+
+```{r}
+load(here('data-raw', 'SOE_species_list.RData'))
+
+#AA
+#Assign areas based on mskeyAreas
+aa <- aggregate_area(aa, userAreas = comlandr::mskeyAreas, areaDescription = 'EPU',
+                     propDescription = 'MeanProp')
+
+#Aggregate by EBFM codes
+aa.agg <- merge(aa, unique(species[!is.na(NESPP3), list(NESPP3, SOE.20, Fed.Managed)]), 
+                by = 'NESPP3', all.x = T)
+
+#Fix NA codes
+aa.agg[is.na(SOE.20), SOE.20 := 'Other']
+
+#Sum Landings
+aa.land <- aa.agg[, sum(SPPLIVMT), by = c('YEAR', 'EPU', 'SOE.20', 'Fed.Managed')]
+aa.land[, Total := sum(V1), by = c('YEAR', 'EPU', 'SOE.20')]
+aa.land[, Prop.managed := V1 / Total]
+setnames(aa.land, 'V1', 'SPPLIVMT')
+
+aa.land
+```
+
+```{r}
+#CAMS
+#Assign areas based on mskeyAreas
+cams <- aggregate_area(cams, userAreas = comlandr::mskeyAreas, areaDescription = 'EPU',
+                       propDescription = 'MeanProp')
+
+#Aggregate by EBFM codes
+cams.agg <- merge(cams, unique(species[!is.na(NESPP3), 
+                                       list(NESPP3, SOE.20, Fed.Managed)]),
+                  by = 'NESPP3', all.x = T)
+
+#Fix NA codes
+cams.agg[is.na(SOE.20), SOE.20 := 'Other']
+
+#Sum Landings
+cams.land <- cams.agg[, sum(SPPLIVMT), by = c('YEAR', 'EPU', 'SOE.20', 'Fed.Managed')]
+cams.land[, Total := sum(V1), by = c('YEAR', 'EPU', 'SOE.20')]
+cams.land[, Prop.managed := V1 / Total]
+setnames(cams.land, 'V1', 'SPPLIVMT')
+
+cams.land
+
+```
+
+Graphical differences
+
+```{r}
+#Merge landings
+all <- merge(aa.land, cams.land, by = c('YEAR', 'EPU', 'SOE.20', 'Fed.Managed'))
+setnames(all, c('SPPLIVMT.x', 'Total.x', 'Prop.managed.x', 
+                'SPPLIVMT.y', 'Total.y', 'Prop.managed.y'),
+         c('AA.SPPLIVMT',   'AA.Total',   'AA.Prop.managed',
+           'CAMS.SPPLIVMT', 'CAMS.Total', 'CAMS.Prop.managed'))
+
+tot.land <- unique(all[, list(YEAR, EPU, SOE.20, AA.Total, CAMS.Total)], 
+                   by = c('YEAR', 'EPU', 'SOE.20'))
+
+#Put in long form
+tot.land.long <- data.table::melt(tot.land, id.vars = c('YEAR', 'EPU', 'SOE.20'))
+
+#Plot as a barplot
+land.bar <- ggplot(data = tot.land.long, 
+                   aes(SOE.20, value, fill = variable)) +
+    geom_bar(stat = "identity", position = 'dodge') +
+    facet_grid(rows = 'EPU', scales = "free")
+
+plot(land.bar)
+
+
 ```
